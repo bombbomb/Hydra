@@ -56,3 +56,5 @@ docs/_build/
 
 # PHP Storm
 .idea/
+
+node_modules/
