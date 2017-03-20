@@ -8,8 +8,8 @@ app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, './build', 'index.html'));
 });
 
-app.get('/infrastucture', function(req, res)  {
-    res.send(200, {
+app.get('/infrastructure', function(req, res)  {
+    res.status(200).send({
         regions : [
             {   name : "east-1",
                 environments : [
@@ -25,7 +25,7 @@ app.get('/infrastucture', function(req, res)  {
 });
 
 app.get('/load', function(req, res)  {
-    res.send(200, {
+    res.status(200).send({
         regions : [
             {   name : "east-1",
                 environments : [
