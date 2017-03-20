@@ -1,0 +1,17 @@
+.Sidebar
+{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 0;
+    z-index: 2;
+    background-color: white;
+    padding: 0;
+}
+
+.show-sidebar .Sidebar {
+    width: 400px;
+    padding: 10px 20px;
+    border-left: grey 1px solid;
+}
