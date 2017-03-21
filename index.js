@@ -1,3 +1,5 @@
+'use strict';
+
 const express           = require('express');
 const path              = require('path');
 const bodyParser        = require('body-parser');
@@ -47,6 +49,8 @@ app.get('/health-check', function(req, res) {
     res.status(200).send('Hydra lives.')
 });
 
+let disneyLandLatLng = [33.811, -117.919];
+let disneyWorldLatLng = [28.370896, -81.543354];
 app.get('/infrastructure', (req, res) => {
     const results = [];
 
