@@ -44,7 +44,7 @@ class Map extends Component {
 
                     let regions = {};
                     response.body.regions.forEach((regionRaw) => {
-                        let region = new Region(regionRaw);
+                        let region = new Region(regionRaw, this.props.changePanel);
                         regions[region.name] = region;
 
                         region.marker.addTo(this.state.map);

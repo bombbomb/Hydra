@@ -30,3 +30,8 @@ h2
 {
   right: 440px;
 }
+
+.no-selections .close-button
+{
+  display: none;
+}

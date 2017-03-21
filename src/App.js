@@ -12,7 +12,8 @@ class App extends Component {
       super(props);
 
       this.state = {
-        showSidebar: false
+          showSidebar: false,
+          sidebarDetails: null
       };
     }
 
@@ -21,19 +22,30 @@ class App extends Component {
         this.setState({ showSidebar: !this.state.showSidebar });
     }
 
+    changePanel(details)
+    {
+        this.setState({
+            showSidebar: true,
+            sidebarDetails: details
+        });
+    }
+
     render() {
-      const { showSidebar } = this.state;
+      const { showSidebar, sidebarDetails } = this.state;
 
       return (
         <div
             className={
                 classNames({
                     "App": true,
-                    "show-sidebar": showSidebar
+                    "show-sidebar": showSidebar,
+                    "no-selections": sidebarDetails == null
                 })
             }
         >
-            <Map />
+            <Map
+                changePanel={this.changePanel.bind(this)}
+            />
 
             <div
                 className="close-button"
@@ -51,7 +63,9 @@ class App extends Component {
                     aria-hidden="true"
                 ></i>
             </div>
-            <Sidebar />
+            <Sidebar
+                details={sidebarDetails}
+            />
         </div>
       );
   }

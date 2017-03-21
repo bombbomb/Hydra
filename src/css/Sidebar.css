@@ -10,8 +10,19 @@
     padding: 0;
 }
 
-.show-sidebar .Sidebar {
+.show-sidebar .Sidebar
+{
     width: 400px;
     padding: 10px 20px;
     border-left: grey 1px solid;
+}
+
+.environment-block
+{
+    padding-top: 20px;
+}
+
+.environment-revision
+{
+    color: purple;
 }
