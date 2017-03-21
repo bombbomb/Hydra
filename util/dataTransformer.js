@@ -11,7 +11,10 @@ class DataTransformer
             regions.push({
                 id : el.id,
                 name : el.region,
-                location : el.location,
+                location : {
+                    lat : el.location.lat,
+                    long : el.location.long,
+                },
                 environments : [{
                     status : el.status,
                     instanceCount : el.instanceCount,

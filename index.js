@@ -20,6 +20,8 @@ const writeConfig = {
     max: 10,
     idleTimeoutMillis: 60000
 };
+
+
 const readConfig = {
     user: process.env.USER || 'foo',
     password: process.env.SECRET || 'secret',
@@ -53,10 +55,10 @@ app.get('/health-check', function(req, res) {
     res.status(200).send('Hydra lives.')
 });
 
-let disneyLandLatLng = [33.811, -117.919];
-let disneyWorldLatLng = [28.370896, -81.543354];
+
 app.get('/infrastructure', (req, res) => {
     const results = [];
+    console.log('WE got a request!!');
 
     readPool.connect((err, client ,done) => {
         if(err)
@@ -111,6 +113,79 @@ app.get('/infrastructure/:id', (req, res) => {
                 success : true,
                 data : dataTransformer.fromInfrastructure(results)
             });
+        })
+    })
+});
+
+app.post('/infrastructure', (req, res) => {
+    const results = [];
+    const parsedLocation = JSON.parse(req.body.location);
+    const location =
+        {
+            lat : parseFloat(parsedLocation[0]),
+            long : parseFloat(parsedLocation[1])
+        };
+
+    writePool.connect((err, client, done) => {
+        if(err)
+        {
+            done();
+            console.log(err);
+            return res.status(500).json({
+                success : false,
+                data: err
+            })
+        }
+
+        client.query('INSERT INTO infrastructure(region, location, status, instanceCount, trafficWeight) values($1, $2, $3, $4, $5)',
+            [req.body.region, location, req.body.status, req.body.instanceCount, req.body.trafficWeight]);
+
+        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC');
+
+        query.on('row', (row) => {
+            results.push(row);
+        });
+
+        query.on('end', () => {
+            done();
+            return res.json(results);
+        })
+    })
+});
+
+app.put('/infrastructure/:id', (req, res) => {
+    const results = [];
+    const id = req.params.id;
+    const parsedLocation = JSON.parse(req.body.location);
+    const location =
+        {
+            lat : parseFloat(parsedLocation[0]),
+            long : parseFloat(parsedLocation[1])
+        };
+
+    writePool.connect((err, client, done) => {
+        if(err)
+        {
+            done();
+            console.log(err);
+            return res.status(500).json({
+                success : false,
+                data: err
+            })
+        }
+
+        client.query('UPDATE infrastructure SET region=($1), location = ($2), status=($3), instanceCount=($4), trafficWeight=($5) WHERE id=($6)',
+            [req.body.region, location, req.body.status, req.body.instanceCount, req.body.trafficWeight, id]);
+
+        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC');
+
+        query.on('row', (row) => {
+            results.push(row);
+        });
+
+        query.on('end', () => {
+            done();
+            return res.json(results);
         })
     })
 });
@@ -223,8 +298,8 @@ app.put('/load/:id', (req, res) => {
             })
         }
 
-        client.query('UPDATE load SET region=($1), errRate=($2), replicationLag=($3);',
-            [req.body.region, req.body.errRate, req.body.replicationLag]);
+        client.query('UPDATE load SET region=($1), errRate=($2), replicationLag=($3) WHERE id=($4);',
+            [req.body.region, req.body.errRate, req.body.replicationLag, id]);
 
         const query = client.query('SELECT * FROM load ORDER BY id ASC;');
 
@@ -246,39 +321,3 @@ app.listen(9000);
 
 
 
-/*
-
- app.post('/infrastructure', (req, res) => {
-     const results = [];
-     const location = JSON.parse(req.body.location);
-     console.log(location);
-
-     pg.connect(connectionString, (err, client, done) => {
-         if(err)
-         {
-             done();
-             console.log(err);
-             return res.status(500).json({
-                 success : false,
-                 data: err
-             })
-         }
-
-         client.query('INSERT INTO infrastructure(region, location, status, instanceCount, trafficWeight) values($1, $2, ARRAY[$3, $4], $5, $6)',
-             [req.body.region, parseInt(location[0]), parseInt(location[1]), req.body.status, req.body.instanceCount, req.body.trafficWeight]);
-
-         const query = client.query('SELECT * FROM load ORDER BY id ASC');
-
-         query.on('row', (row) => {
-             results.push(row);
-         });
-
-         query.on('end', () => {
-             done();
-             return res.json(results);
-         })
-     })
- });
-
-
- */
