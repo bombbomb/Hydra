@@ -12,6 +12,8 @@ const dataTransformer   = new DataTransformer();
 const app = express();
 
 const writeConfig = {
+    user: process.env.USER || 'foo',
+    password: process.env.SECRET || 'secret',
     database: process.env.WRITE_DATABASE || 'hydra_local',
     host: process.env.DATABASE_HOST || 'localhost',
     port: process.env.DATABASE_PORT || 5432,
@@ -19,6 +21,8 @@ const writeConfig = {
     idleTimeoutMillis: 60000
 };
 const readConfig = {
+    user: process.env.USER || 'foo',
+    password: process.env.SECRET || 'secret',
     database: process.env.READ_DATABASE || 'hydra_local',
     host: process.env.DATABASE_HOST || 'localhost',
     port: process.env.DATABASE_PORT || 5432,
