@@ -70,10 +70,10 @@ class Map extends Component {
 
                     let regions = this.state.regions;
                     response.body.regions.forEach((region) => {
-                        regions[region.name].updateEnvironments(region.environments);
+                        regions[region.name].update(region);
                     });
 
-                    this.setState({ regions: regions }, () => console.log('Got here', this.state.regions));
+                    this.setState({ regions: regions });
                 }
             );
     }

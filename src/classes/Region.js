@@ -4,11 +4,7 @@ export class Region
 {
     constructor(region)
     {
-        for (let key in region) {
-            if (region.hasOwnProperty(key)) {
-                this[key] = region[key];
-            }
-        }
+        this.updateKeys(region);
 
         let serverIcon = L.AwesomeMarkers.icon({
             icon: 'server',
@@ -19,9 +15,11 @@ export class Region
         this.marker = L.marker(region.location, {icon: serverIcon});
     }
 
-    updateEnvironments(environments)
+    update(regionStats)
     {
-        environments.forEach((environment) => {
+        this.updateKeys(regionStats);
+
+        regionStats.environments.forEach((environment) => {
 
             for (let i = 0; i < this.environments.length; i++)
             {
@@ -33,6 +31,15 @@ export class Region
             }
 
         });
+    }
+
+    updateKeys(keys)
+    {
+        for (let key in keys) {
+            if (keys.hasOwnProperty(key)) {
+                this[key] = keys[key];
+            }
+        }
     }
 
 }

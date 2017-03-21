@@ -1,3 +1,5 @@
+'use strict';
+
 const express           = require('express');
 const path              = require('path');
 const bodyParser        = require('body-parser');
@@ -23,19 +25,42 @@ app.get('/health-check', function(req, res) {
     res.status(200).send('Hydra lives.')
 });
 
+let disneyLandLatLng = [33.811, -117.919];
+let disneyWorldLatLng = [28.370896, -81.543354];
 app.get('/infrastructure', (req, res) => {
     res.status(200).json({
         regions : [
             {
                 name : "east-1",
+                location: disneyLandLatLng,
                 environments : [
                     {
+                        revision: 1.0,
                         status : 'green',
                         instanceCount : 12,
                         trafficWeight: 0.3
+                    },
+                    {
+                        revision: 1.1,
+                        status : 'yellow',
+                        instanceCount : 12,
+                        trafficWeight: 0.7
                     }
                 ]
-            }]
+            },
+            {
+                name : "west-1",
+                location: disneyWorldLatLng,
+                environments : [
+                    {
+                        revision: 1.0,
+                        status : 'red',
+                        instanceCount : 9,
+                        trafficWeight: 0.5
+                    }
+                ]
+            }
+        ]
     })
 });
 
@@ -75,11 +100,27 @@ app.get('/infrastructure', (req, res) => {
 app.get('/load', (req, res) => {
     res.status(200).json({
         regions : [
-            {   name : "east-1",
+            {
+                name : "east-1",
+                replicationLag : 0.7,
                 environments : [
                     {
-                        errRate : 0.1,
-                        replicationLag : 0.7
+                        revision: 1.0,
+                        errRate : 0.1
+                    },
+                    {
+                        revision: 1.1,
+                        errRate : 0.3
+                    }
+                ]
+            },
+            {
+                name : "west-1",
+                replicationLag : 0.7,
+                environments : [
+                    {
+                        revision: 1.0,
+                        errRate : 0.1
                     }
                 ]
             }
