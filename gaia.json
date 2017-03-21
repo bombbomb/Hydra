@@ -1,0 +1,41 @@
+{
+  "regions": ["us-east-2", "us-west-1"],
+  "appName": "hydra",
+  "dnsZone": "bbhydra.com.",
+  "dnsHostname": "hydra",
+  "elasticBeanstalk": {
+    "solutionStack": "64bit Amazon Linux 2016.09 v4.0.0 running Node.js",
+    "optionSettings": [
+      {
+        "Namespace": "aws:autoscaling:launchconfiguration",
+        "OptionName": "InstanceType",
+        "Value": "t2.micro"
+      },
+      {
+        "Namespace": "aws:elasticbeanstalk:environment",
+        "OptionName": "ServiceRole",
+        "Value": "aws-elasticbeanstalk-service-role"
+      },
+      {
+        "Namespace": "aws:elasticbeanstalk:application",
+        "OptionName": "Application Healthcheck URL",
+        "Value": "/"
+      },
+      {
+        "Namespace": "aws:elb:loadbalancer",
+        "OptionName": "CrossZone",
+        "Value": "true"
+      },
+      {
+        "Namespace": "aws:elasticbeanstalk:application:environment",
+        "OptionName": "PORT",
+        "Value": "80"
+      },
+      {
+        "Namespace": "aws:elasticbeanstalk:application:environment",
+        "OptionName": "ENDPOINT",
+        "Value": "http://app.bbhydra.com"
+      }
+    ]
+  }
+}
