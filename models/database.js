@@ -1,7 +1,8 @@
 const pg = require('pg');
-const connectionString = process.env.DATABASE_URL || 'postgres://localhost:5432/hydra_local';
+const writeConnectionString  = process.env.DATABASE_WRITE_URL || 'postgres://localhost:5432/hydra_local';
+const readConnectionString  = process.env.DATABASE_READ_URL || 'postgres://localhost:5432/hydra_local';
 
-const client = new pg.Client(connectionString);
+const client = new pg.Client(writeConnectionString);
 client.connect();
 const query = client.query(
     'CREATE TABLE IF NOT EXISTS ' +
