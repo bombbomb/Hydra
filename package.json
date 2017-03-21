@@ -7,7 +7,9 @@
     "classnames": "^2.2.5",
     "leaflet": "^1.0.3",
     "react": "^15.4.2",
-    "react-dom": "^15.4.2"
+    "react-dom": "^15.4.2",
+    "request": "^2.81.0",
+    "superagent": "^3.5.1"
   },
   "devDependencies": {
     "react-scripts": "0.9.5"

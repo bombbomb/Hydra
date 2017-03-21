@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import './css/App.css';
 import classNames from 'classnames';
-import autobind from 'autobind-decorator';
 
 import Map from './Map.js';
 import Sidebar from './Sidebar.js';
