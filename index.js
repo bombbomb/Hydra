@@ -58,7 +58,6 @@ app.get('/health-check', function(req, res) {
 
 app.get('/infrastructure', (req, res) => {
     const results = [];
-    console.log('WE got a request!!');
 
     readPool.connect((err, client ,done) => {
         if(err)
