@@ -26,7 +26,7 @@ export class Region
     update(regionStats)
     {
         for (let key in regionStats) {
-            if (regionStats.hasOwnProperty(key) && key != 'environments') {
+            if (regionStats.hasOwnProperty(key) && key !== 'environments') {
                 this[key] = regionStats[key];
             }
         }
@@ -35,7 +35,7 @@ export class Region
 
             for (let i = 0; i < this.environments.length; i++)
             {
-                if (environment.revision == this.environments[i].revision)
+                if (environment.revision === this.environments[i].revision)
                 {
                     for (let key in environment) {
                         if (environment.hasOwnProperty(key)) {

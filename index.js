@@ -11,6 +11,9 @@ const dataTransformer   = new DataTransformer();
 
 const app = express();
 
+const http              = require('http').Server(app);
+const io                = require('socket.io')(http);
+
 const writeConfig = {
     database: process.env.WRITE_DATABASE || 'hydra_local',
     host: process.env.DATABASE_HOST || 'localhost',
@@ -238,8 +241,31 @@ app.put('/load/:id', (req, res) => {
     })
 });
 
-app.listen(9000);
+app.get('/testio', (req, res) => {
+    console.log('req', req.query);
+    io.emit('person added', req.query);
 
+    return res.status(200).json({
+        success : true,
+        data : null
+    });
+});
+
+io.on('connection', function(socket){
+    console.log('a user connected');
+
+    socket.on('disconnect', function(){
+        console.log('user disconnected');
+    });
+
+    socket.on('chat message', function(msg){
+        console.log('message: ' + msg);
+    });
+});
+
+http.listen(9000, function(){
+    console.log('listening on *:9000');
+});
 
 
 /*

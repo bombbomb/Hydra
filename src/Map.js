@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import L from 'leaflet';
 import request from 'superagent';
+import client from 'socket.io-client';
 import 'leaflet/dist/leaflet.css';
 import './vendors/font-awesome/css/font-awesome.css';
 import './vendors/awesome-markers/leaflet.awesome-markers.css';
@@ -8,11 +9,22 @@ import './vendors/awesome-markers/leaflet.awesome-markers.js';
 
 import './css/Map.css';
 import Region from './classes/Region.js';
+import User from './classes/User.js';
 
 class Map extends Component {
 
-    componentDidMount()
+    constructor(props)
     {
+        super(props);
+
+        this.state = {
+            regions: {},
+            users: {},
+            map: null
+        }
+    }
+
+    componentDidMount() {
         const bombBombLatLng = [38.833, -104.826];
 
         L.AwesomeMarkers.Icon.prototype.options.prefix = 'fa';
@@ -24,9 +36,39 @@ class Map extends Component {
             maxZoom: 18
         }).addTo(map);
 
-        this.setState({ map: map });
+        this.setState({map: map}, () => {
+            this.updateRegions(this.updateRegionLoad);
+            this.setupSocketListener();
+        });
+    }
 
-        this.updateRegions(this.updateRegionLoad);
+    setupSocketListener() {
+        let socket = client.connect('/');
+
+        socket.on('person added', (userMsg) => {
+            const { users, regions, map } = this.state;
+
+            let user = users[userMsg.name];
+            if (user === undefined)
+            {
+                user = new User(userMsg, this.props.changePanel);
+                user.marker.addTo(map);
+                user.connectToRegion(regions[userMsg.region]).addTo(map);
+            }
+            else
+            {
+                if (user.getConnectedToRegion().name != userMsg.region)
+                {
+                    user.getConnectedLine().removeFrom(map);
+                    user.connectToRegion(regions[userMsg.region]).addTo(map);
+                }
+
+                user.update(userMsg);
+            }
+
+            users[userMsg.name] = user;
+            this.setState({ users: users });
+        });
     }
 
     updateRegions(callback)
