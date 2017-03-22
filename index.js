@@ -15,13 +15,19 @@ const http              = require('http').Server(app);
 const io                = require('socket.io')(http);
 
 const writeConfig = {
+    user: process.env.USER || 'foo',
+    password: process.env.SECRET || 'secret',
     database: process.env.WRITE_DATABASE || 'hydra_local',
     host: process.env.DATABASE_HOST || 'localhost',
     port: process.env.DATABASE_PORT || 5432,
     max: 10,
     idleTimeoutMillis: 60000
 };
+
+
 const readConfig = {
+    user: process.env.USER || 'foo',
+    password: process.env.SECRET || 'secret',
     database: process.env.READ_DATABASE || 'hydra_local',
     host: process.env.DATABASE_HOST || 'localhost',
     port: process.env.DATABASE_PORT || 5432,
@@ -52,10 +58,10 @@ app.get('/health-check', function(req, res) {
     res.status(200).send('Hydra lives.')
 });
 
-let disneyLandLatLng = [33.811, -117.919];
-let disneyWorldLatLng = [28.370896, -81.543354];
+
 app.get('/infrastructure', (req, res) => {
     const results = [];
+    console.log('WE got a request!!');
 
     readPool.connect((err, client ,done) => {
         if(err)
@@ -110,6 +116,79 @@ app.get('/infrastructure/:id', (req, res) => {
                 success : true,
                 data : dataTransformer.fromInfrastructure(results)
             });
+        })
+    })
+});
+
+app.post('/infrastructure', (req, res) => {
+    const results = [];
+    const parsedLocation = JSON.parse(req.body.location);
+    const location =
+        {
+            lat : parseFloat(parsedLocation[0]),
+            long : parseFloat(parsedLocation[1])
+        };
+
+    writePool.connect((err, client, done) => {
+        if(err)
+        {
+            done();
+            console.log(err);
+            return res.status(500).json({
+                success : false,
+                data: err
+            })
+        }
+
+        client.query('INSERT INTO infrastructure(region, location, status, instanceCount, trafficWeight) values($1, $2, $3, $4, $5)',
+            [req.body.region, location, req.body.status, req.body.instanceCount, req.body.trafficWeight]);
+
+        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC');
+
+        query.on('row', (row) => {
+            results.push(row);
+        });
+
+        query.on('end', () => {
+            done();
+            return res.json(results);
+        })
+    })
+});
+
+app.put('/infrastructure/:id', (req, res) => {
+    const results = [];
+    const id = req.params.id;
+    const parsedLocation = JSON.parse(req.body.location);
+    const location =
+        {
+            lat : parseFloat(parsedLocation[0]),
+            long : parseFloat(parsedLocation[1])
+        };
+
+    writePool.connect((err, client, done) => {
+        if(err)
+        {
+            done();
+            console.log(err);
+            return res.status(500).json({
+                success : false,
+                data: err
+            })
+        }
+
+        client.query('UPDATE infrastructure SET region=($1), location = ($2), status=($3), instanceCount=($4), trafficWeight=($5) WHERE id=($6)',
+            [req.body.region, location, req.body.status, req.body.instanceCount, req.body.trafficWeight, id]);
+
+        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC');
+
+        query.on('row', (row) => {
+            results.push(row);
+        });
+
+        query.on('end', () => {
+            done();
+            return res.json(results);
         })
     })
 });
@@ -222,8 +301,8 @@ app.put('/load/:id', (req, res) => {
             })
         }
 
-        client.query('UPDATE load SET region=($1), errRate=($2), replicationLag=($3);',
-            [req.body.region, req.body.errRate, req.body.replicationLag]);
+        client.query('UPDATE load SET region=($1), errRate=($2), replicationLag=($3) WHERE id=($4);',
+            [req.body.region, req.body.errRate, req.body.replicationLag, id]);
 
         const query = client.query('SELECT * FROM load ORDER BY id ASC;');
 
@@ -263,13 +342,12 @@ io.on('connection', function(socket){
     });
 });
 
-http.listen(9000, function(){
-    console.log('listening on *:9000');
+http.listen(process.env.PORT || 9000, function(){
+    console.log('listening on *:' + process.env.PORT || 9000);
 });
 
 
 /*
-
  app.post('/infrastructure', (req, res) => {
      const results = [];
      const location = JSON.parse(req.body.location);
@@ -294,13 +372,4 @@ http.listen(9000, function(){
          query.on('row', (row) => {
              results.push(row);
          });
-
-         query.on('end', () => {
-             done();
-             return res.json(results);
-         })
-     })
- });
-
-
- */
+*/
