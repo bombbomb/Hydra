@@ -5,6 +5,7 @@ const path              = require('path');
 const bodyParser        = require('body-parser');
 const cookieParser      = require('cookie-parser');
 const pg                = require('pg');
+const request           = require('request');
 
 const DataTransformer   = require('./util/dataTransformer');
 const dataTransformer   = new DataTransformer();
@@ -255,6 +256,28 @@ app.get('/load/:id', (req, res) => {
 app.post('/load', (req, res) => {
     const results = [];
 
+    let user = req.body;
+
+    user.region = process.env.GAIA_REGION || 'unknown';
+    user.appVersion = process.env.GAIA_VERSION || 'unknown';
+
+    request(
+        {
+            url: 'http://iris.bbhydra.com/post',
+            method: 'post',
+            json: true,
+            body: {
+                type: "Mob",
+                data: user
+            }
+        }
+        , function (error, response, body) {
+            console.log('error:', error);
+            console.log('statusCode:', response && response.statusCode);
+            console.log('body:', body);
+        }
+    );
+
     writePool.connect((err, client, done) => {
         if(err)
         {
@@ -269,19 +292,10 @@ app.post('/load', (req, res) => {
         client.query('INSERT INTO load(region, errRate, replicationLag) values($1, $2, $3);',
         [req.body.region, req.body.errRate, req.body.replicationLag]);
 
-        const query = client.query('SELECT * FROM load ORDER BY id ASC;');
-
-        query.on('row', (row) => {
-            results.push(row);
+        return res.status(200).json({
+            success : true,
+            data : user
         });
-
-        query.on('end', () => {
-            done();
-            return res.status(200).json({
-                success : true,
-                data : dataTransformer.fromLoad(results)
-            });
-        })
     })
 });
 
@@ -329,20 +343,10 @@ app.get('/testio', (req, res) => {
     });
 });
 
-io.on('connection', function(socket){
-    console.log('a user connected');
 
-    socket.on('disconnect', function(){
-        console.log('user disconnected');
-    });
-
-    socket.on('chat message', function(msg){
-        console.log('message: ' + msg);
-    });
-});
-
-http.listen(process.env.PORT || 9000, function(){
-    console.log('listening on *:' + (process.env.PORT || 9000));
+const port = process.env.PORT || 9000;
+http.listen(port, function(){
+    console.log('listening on *:' + port);
 });
 
 

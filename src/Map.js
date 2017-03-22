@@ -43,9 +43,13 @@ class Map extends Component {
     }
 
     setupSocketListener() {
-        let socket = client.connect('/');
+        let socket = client.connect('http://iris.bbhydra.com');
 
-        socket.on('person added', (userMsg) => {
+        socket.on('event', (message) => {
+            if (message.type === undefined || message.type !== 'Mob') return;
+
+            let userMsg = message.data;
+
             const { users, regions, map } = this.state;
 
             let user = users[userMsg.name];
