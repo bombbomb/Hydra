@@ -3,6 +3,9 @@
   "appName": "hydra",
   "dnsZone": "bbhydra.com.",
   "dnsHostname": "hydra",
+  "buildIgnorePatterns": [
+    "node_modules"
+  ],
   "environmentVariables": {
     "global": {
       "PORT": "80",
