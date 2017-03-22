@@ -3,13 +3,23 @@
   "appName": "hydra",
   "dnsZone": "bbhydra.com.",
   "dnsHostname": "hydra",
+  "environmentVariables": {
+    "global": {
+      "ENDPOINT": "http://app.bbhydra.com",
+      "PORT": "80"
+    },
+    "regional": {
+      "us-east-2": {"LAT": "39", "LONG": "-113", "THROW": "10"},
+      "us-west-1": {"LAT": "37", "LONG": "-86", "THROW": "10"}
+    }
+  },
   "elasticBeanstalk": {
     "solutionStack": "64bit Amazon Linux 2016.09 v4.0.0 running Node.js",
     "optionSettings": [
       {
         "Namespace": "aws:autoscaling:launchconfiguration",
         "OptionName": "InstanceType",
-        "Value": "t2.micro"
+        "Value": "t2.nano"
       },
       {
         "Namespace": "aws:elasticbeanstalk:environment",
