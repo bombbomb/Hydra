@@ -2,9 +2,9 @@ const pg = require('pg');
 const writeConfig = {
     user: process.env.USER || 'foo',
     password: process.env.SECRET || 'secret',
-    database: process.env.WRITE_DATABASE || 'hydra_local',
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: process.env.DATABASE_PORT || 5432,
+    database: process.env.DB_NAME || 'hydra_local',
+    host: process.env.DB_WRITE_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
     max: 10,
     idleTimeoutMillis: 60000
 };

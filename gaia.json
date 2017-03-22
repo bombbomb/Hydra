@@ -5,8 +5,13 @@
   "dnsHostname": "hydra",
   "environmentVariables": {
     "global": {
-      "ENDPOINT": "http://app.bbhydra.com",
-      "PORT": "80"
+      "PORT": "80",
+      "USER": "master_hydra",
+      "SECRET": "XXX",
+      "DB_NAME": "hydra",
+      "DB_WRITE_HOST": "writedb.bbhydra.com",
+      "DB_READ_HOST": "readdb.bbhydra.com",
+      "DB_PORT": "5432"
     },
     "regional": {
       "us-east-2": {"LAT": "39", "LONG": "-113", "THROW": "10"},

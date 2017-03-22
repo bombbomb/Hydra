@@ -20,7 +20,7 @@
     "react-scripts": "0.9.5"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node index.js",
     "build-db" : "node models/database.js",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
