@@ -12,7 +12,7 @@ export class Region
 
         let serverIcon = L.AwesomeMarkers.icon({
             icon: 'server',
-            markerColor: region.status,
+            markerColor: 'blue',
             iconColor: 'white'
         });
 

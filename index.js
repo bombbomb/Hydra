@@ -64,13 +64,11 @@ app.get('/health-check', function(req, res) {
 });
 
 
-app.get('/infrastructure', (req, res) => {
-    const results = [];
-
-    readPool.query("SELECT * FROM infrastructure WHERE status <> 'Black'", [], function(err, data) {
+function describeInfra(cb) {
+    readPool.query("SELECT * FROM infrastructure WHERE status <> 'Black'", [], function (err, data) {
 
         const regions = {};
-        data.rows.forEach(function(el, ind) {
+        data.rows.forEach(function (el, ind) {
 
             if (!regions[el.region]) {
                 regions[el.region] = {
@@ -96,7 +94,7 @@ app.get('/infrastructure', (req, res) => {
         });
 
         let result = [];
-        for(let i in regions) {
+        for (let i in regions) {
             let r = regions[i];
 
             let envs = r.environments;
@@ -107,8 +105,15 @@ app.get('/infrastructure', (req, res) => {
             result.push(r);
         }
 
-        return res.status(200).json(result);
+        cb(result);
 
+    });
+}
+app.get('/infrastructure', (req, res) => {
+    const results = [];
+    describeInfra(function(infra) {
+
+        return res.status(200).json(infra);
     });
 });
 
@@ -120,22 +125,7 @@ app.post('/load', (req, res) => {
     user.region = appRegion;
     user.appVersion = appVersion;
 
-    request(
-        {
-            url: 'http://iris.bbhydra.com/post',
-            method: 'post',
-            json: true,
-            body: {
-                type: "Mob",
-                data: user
-            }
-        }
-        , function (error, response, body) {
-            if (error) {
-                console.log('iris error:', error);
-            }
-        }
-    );
+    pingIris("Mob", user);
 
     let qry = 'INSERT INTO load (region, version, username, ping) values ($1, $2, $3, $4)';
     writePool.query(qry, [appRegion, appVersion, req.body.name, req.body.lastPing], function(err, data) {
@@ -166,6 +156,9 @@ let runTimers = function () {
             function (err, result) {
                 if (err)
                     console.log("Red old infra", err, result);
+
+                if (result.rowCount)
+                    infrastructureUpdate();
             });
 
 
@@ -178,6 +171,9 @@ let runTimers = function () {
             "UPDATE infrastructure SET status = 'Black' WHERE last_heard_from < NOW() - INTERVAL '15 minutes'", [], function (err, result) {
                 if (err)
                     console.log("Black old infra", err, result);
+
+                if (result.rowCount)
+                    infrastructureUpdate();
             });
 
     }, 31 * 1000);
@@ -192,7 +188,36 @@ http.listen(port, function(){
         function(err, result) {
             console.log("created infra", err, result);
 
+        infrastructureUpdate();
+
     });
     runTimers();
 
 });
+
+function infrastructureUpdate()
+{
+    describeInfra(function(i) {
+        pingIris("Infrastructure", i);
+    });
+}
+
+
+function pingIris(type, body) {
+    request(
+        {
+            url: 'http://iris.bbhydra.com/post',
+            method: 'post',
+            json: true,
+            body: {
+                'type': type,
+                'body': body
+            }
+        }
+        , function (error, response, body) {
+            if (error) {
+                console.log('iris error:', error);
+            }
+        }
+    );
+}

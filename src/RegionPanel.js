@@ -11,7 +11,6 @@ class RegionPanel extends Component {
             environments.push((
                 <div className="environment-block" key={details.name + environment.name}>
                     <div className="environment-revision">{environment.name} environment</div>
-                    <div>Instances ({environment.instances.length})</div>
                     {
                         environment.instances.map(function(instance) {
                             return (

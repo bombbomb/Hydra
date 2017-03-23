@@ -8,9 +8,10 @@ export class User
         this.update(user);
 
         this.marker = L.circle(this.getLatLng(), {
-            color: '#38A9DB',
+            color: this.getColor(),
             fillColor: 'white',
-            fillOpacity: 1,
+            fillOpacity: 0.7,
+            opacity: 0.7,
             radius: 2000
         });
 
@@ -28,6 +29,15 @@ export class User
         }
     }
 
+    getColor()
+    {
+        let color = 'green';
+        if (this.lastPing > 200) color = 'red';
+        else if (this.lastPing > 100) color = 'orange';
+
+        return color;
+    }
+
     getLatLng()
     {
         return [this.lat, this.long];
@@ -41,12 +51,13 @@ export class User
     connectToRegion(region)
     {
         this.connectedRegion = region;
+
         this.connectedPolyLine = L.polyline(
             [this.getLatLng(), region.getLatLng()],
             {
-                color: '#38A9DB',
+                color: this.getColor(),
                 weight: 2,
-                opacity: 0.7
+                opacity: 0.3
             }
         );
 

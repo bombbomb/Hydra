@@ -20,14 +20,19 @@
 .environment-block, .instance-block
 {
     padding-top: 20px;
+    color: grey;
+    font-size: 14px;
 }
 
 .instance-header
 {
-    color: dodgerblue;
+    color: black;
 }
 
 .environment-revision
 {
-    color: purple;
+    color: black;
+    font-size: 16px;
+    border-bottom: 1px solid;
+    padding-bottom: 10px;
 }

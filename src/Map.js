@@ -25,19 +25,17 @@ class Map extends Component {
     }
 
     componentDidMount() {
-        const bombBombLatLng = [38.833, -104.826];
-
         L.AwesomeMarkers.Icon.prototype.options.prefix = 'fa';
 
-        let map = L.map('map').setView(bombBombLatLng, 4);
+        let map = L.map('map').setView([38.833, -50.826], 3);
 
         L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/light-v9/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYm9tYmJvbWIiLCJhIjoiY2owZ3dram8yMDJ2cTMycDU3M3JuOW5vZSJ9._eHrHFHdFpyrX4eJ82Whgg', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-            maxZoom: 18
+            maxZoom: 6
         }).addTo(map);
 
         this.setState({map: map}, () => {
-            this.updateRegions(this.updateRegionLoad);
+            this.initializeRegions();
             this.setupSocketListener();
         });
     }
@@ -46,38 +44,50 @@ class Map extends Component {
         let socket = client.connect('http://iris.bbhydra.com');
 
         socket.on('event', (message) => {
-            if (message.type === undefined || message.type !== 'Mob') return;
-
-            let userMsg = message.data;
-
-            const { users, regions, map } = this.state;
-
-            let user = users[userMsg.name];
-            let region = regions[userMsg.region];
-            if (user === undefined)
-            {
-                user = new User(userMsg, this.props.changePanel);
-                user.marker.addTo(map);
-            }
-            else
-            {
-                if (user.isConnectedToRegion() && user.getConnectedToRegion().name != userMsg.region) {
-                    user.getConnectedLine().removeFrom(map);
-                }
-
-                user.update(userMsg);
-            }
-
-            if (region !== undefined)
-            {
-                user.connectToRegion(region).addTo(map);
-
-                setTimeout(() => this.fadeAway(user), 500);
-            }
-
-            users[userMsg.name] = user;
-            this.setState({ users: users });
+            if (message.type === undefined) return;
+            if (message.type === 'Mob') this.updateUser(message.data);
+            if (message.type === 'Infrastructure') this.updateInfrastructures(message.data);
         });
+    }
+
+    updateUser(userMsg)
+    {
+        const { users, regions, map } = this.state;
+
+        let user = users[userMsg.name];
+        let region = regions[userMsg.region];
+        if (user === undefined)
+        {
+            user = new User(userMsg, this.props.changePanel);
+        }
+        else
+        {
+            if (user.isConnectedToRegion() && user.getConnectedToRegion().name != userMsg.region) {
+                user.getConnectedLine().removeFrom(map);
+            }
+
+            user.marker.removeFrom(map);
+            user.update(userMsg);
+        }
+
+        user.marker.addTo(map);
+
+        if (region !== undefined)
+        {
+            user.connectToRegion(region).addTo(map);
+
+            //setTimeout(() => this.fadeAway(user), 500);
+            setTimeout(() => user.getConnectedLine().removeFrom(map), 1000);
+        }
+
+        users[userMsg.name] = user;
+        this.setState({ users: users });
+    }
+
+    updateInfrastructures(infraMsg)
+    {
+        this.clearRegions();
+        this.updateRegions(infraMsg);
     }
 
     fadeAway(user)
@@ -95,7 +105,7 @@ class Map extends Component {
             : user.getConnectedLine().removeFrom(this.state.map);
     }
 
-    updateRegions(callback)
+    initializeRegions()
     {
         request
             .get('/infrastructure')
@@ -116,49 +126,34 @@ class Map extends Component {
                         return;
                     }
 
-                    let regions = {};
-                    regionsResponse.forEach((regionRaw) => {
-                        let region = new Region(regionRaw, this.props.changePanel);
-                        regions[region.name] = region;
-
-                        region.marker.addTo(this.state.map);
-                    });
-
-                    this.setState({ regions: regions });
-                    //this.setState({ regions: regions }, callback);
+                    this.updateRegions(regionsResponse);
                 }
             );
     }
 
-    updateRegionLoad()
+    clearRegions()
     {
-        request
-            .get('/load')
-            .end(
-                (error, response) =>
-                {
-                    if (error)
-                    {
-                        console.log('Error', error);
-                        return;
-                    }
+        let regions = this.state.regions;
 
-                    let regionsResponse = response.body;
+        for (let key in regions) {
+            if (regions.hasOwnProperty(key) && regions[key] instanceof Region) {
+                regions[key].marker.removeFrom(this.state.map);
+            }
+        }
+    }
 
-                    if (!(regionsResponse instanceof Array))
-                    {
-                        console.log('Bad load response', regionsResponse);
-                        return;
-                    }
+    updateRegions(rawRegions)
+    {
+        let regions = {};
 
-                    let regions = this.state.regions;
-                    regionsResponse.forEach((region) => {
-                        regions[region.name].update(region);
-                    });
+        rawRegions.forEach((regionRaw) => {
+            let region = new Region(regionRaw, this.props.changePanel);
+            regions[region.name] = region;
 
-                    this.setState({ regions: regions });
-                }
-            );
+            region.marker.addTo(this.state.map);
+        });
+
+        this.setState({ regions: regions });
     }
 
     render() {
