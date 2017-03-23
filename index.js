@@ -6,6 +6,7 @@ const bodyParser        = require('body-parser');
 const cookieParser      = require('cookie-parser');
 const pg                = require('pg');
 const request           = require('request');
+const Moniker = require('moniker');
 
 const DataTransformer   = require('./util/dataTransformer');
 const dataTransformer   = new DataTransformer();
@@ -13,7 +14,6 @@ const dataTransformer   = new DataTransformer();
 const app = express();
 
 const http              = require('http').Server(app);
-const io                = require('socket.io')(http);
 
 const writeConfig = {
     user: process.env.USER || 'foo',
@@ -36,13 +36,17 @@ const readConfig = {
     idleTimeoutMillis: 60000
 };
 
-
-//this initializes a connection pool
-//it will keep idle connections open for 60 seconds
-//and set a limit of maximum 10 idle clients
 const writePool = new pg.Pool(writeConfig);
 const readPool = new pg.Pool(readConfig);
 
+const appRegion = process.env.GAIA_REGION || 'local';
+const appVersion = process.env.GAIA_VERSION || 'hot';
+
+const infraLat = process.env.LAT || '38.8';
+const infraLong = process.env.LONG || '-104.7';
+
+const instanceName = Moniker.choose();
+const infraId = appRegion + '.' + appVersion + '.' + instanceName;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -63,7 +67,7 @@ app.get('/health-check', function(req, res) {
 app.get('/infrastructure', (req, res) => {
     const results = [];
 
-    readPool.connect((err, client ,done) => {
+    readPool.connect((err, client, done) => {
         if(err)
         {
             done();
@@ -74,122 +78,57 @@ app.get('/infrastructure', (req, res) => {
             })
         }
 
-        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC;');
-
-        query.on('row', (row) => {
-            results.push(row);
-        });
-
-        query.on('end', () => {
+        client.query("SELECT * FROM infrastructure WHERE status <> 'Black'", [], function(err, data) {
             done();
-            return res.status(200).json({
-                success : true,
-                data : dataTransformer.fromInfrastructure(results)
+            console.log(data);
+
+            const regions = {};
+            data.rows.forEach(function(el, ind) {
+
+                if (!regions[el.region]) {
+                    regions[el.region] = {
+                        name: el.region,
+                        lat: el.latitude,
+                        long: el.longitude,
+                        environments: {}
+                    };
+                }
+
+                if (!regions[el.region].environments[el.version]) {
+                    regions[el.region].environments[el.version] = {
+                        name: el.version,
+                        instances: []
+                    };
+                }
+
+                regions[el.region].environments[el.version].instances.push({
+                    name: el.instance_name,
+                    status: el.status,
+                    created: el.created
+                });
             });
-        })
-    })
-});
 
-app.get('/infrastructure/:id', (req, res) => {
-    const results = [];
+            let result = [];
+            for(let i in regions) {
+                let r = regions[i];
 
-    readPool.connect((err, client ,done) => {
-        if(err)
-        {
-            done();
-            console.log(err);
-            return res.status(500).json({
-                success : false,
-                data: err
-            })
-        }
+                let envs = r.environments;
 
-        const query = client.query('SELECT * FROM infrastructure WHERE id=($1);', [req.params.id]);
+                r.environments = [];
 
-        query.on('row', (row) => {
-            results.push(row);
+                for (let e in envs) {
+                    r.environments.push(envs[e]);
+                }
+
+
+                result.push(r);
+            }
+
+
+
+            return res.status(200).json(result);
+
         });
-
-        query.on('end', () => {
-            done();
-            return res.status(200).json({
-                success : true,
-                data : dataTransformer.fromInfrastructure(results)
-            });
-        })
-    })
-});
-
-app.post('/infrastructure', (req, res) => {
-    const results = [];
-    const parsedLocation = JSON.parse(req.body.location);
-    const location =
-        {
-            lat : parseFloat(parsedLocation[0]),
-            long : parseFloat(parsedLocation[1])
-        };
-
-    writePool.connect((err, client, done) => {
-        if(err)
-        {
-            done();
-            console.log(err);
-            return res.status(500).json({
-                success : false,
-                data: err
-            })
-        }
-
-        client.query('INSERT INTO infrastructure(region, location, status, instanceCount, trafficWeight) values($1, $2, $3, $4, $5)',
-            [req.body.region, location, req.body.status, req.body.instanceCount, req.body.trafficWeight]);
-
-        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC');
-
-        query.on('row', (row) => {
-            results.push(row);
-        });
-
-        query.on('end', () => {
-            done();
-            return res.json(results);
-        })
-    })
-});
-
-app.put('/infrastructure/:id', (req, res) => {
-    const results = [];
-    const id = req.params.id;
-    const parsedLocation = JSON.parse(req.body.location);
-    const location =
-        {
-            lat : parseFloat(parsedLocation[0]),
-            long : parseFloat(parsedLocation[1])
-        };
-
-    writePool.connect((err, client, done) => {
-        if(err)
-        {
-            done();
-            console.log(err);
-            return res.status(500).json({
-                success : false,
-                data: err
-            })
-        }
-
-        client.query('UPDATE infrastructure SET region=($1), location = ($2), status=($3), instanceCount=($4), trafficWeight=($5) WHERE id=($6)',
-            [req.body.region, location, req.body.status, req.body.instanceCount, req.body.trafficWeight, id]);
-
-        const query = client.query('SELECT * FROM infrastructure ORDER BY id ASC');
-
-        query.on('row', (row) => {
-            results.push(row);
-        });
-
-        query.on('end', () => {
-            done();
-            return res.json(results);
-        })
     })
 });
 
@@ -223,43 +162,13 @@ app.get('/load', (req, res) => {
     })
 });
 
-app.get('/load/:id', (req, res) => {
-    const results = [];
-
-    readPool.connect((err, client ,done) => {
-        if(err)
-        {
-            done();
-            console.log(err);
-            return res.status(500).json({
-                success : false,
-                data: err
-            })
-        }
-
-        const query = client.query('SELECT * FROM load WHERE id=($1);', [req.params.id]);
-
-        query.on('row', (row) => {
-            results.push(row);
-        });
-
-        query.on('end', () => {
-            done();
-            return res.status(200).json({
-                success : true,
-                data : dataTransformer.fromLoad(results)
-            });
-        })
-    })
-});
-
 app.post('/load', (req, res) => {
     const results = [];
 
     let user = req.body;
 
-    user.region = process.env.GAIA_REGION || 'unknown';
-    user.appVersion = process.env.GAIA_VERSION || 'unknown';
+    user.region = appRegion;
+    user.appVersion = appVersion;
 
     request(
         {
@@ -299,80 +208,74 @@ app.post('/load', (req, res) => {
     })
 });
 
-app.put('/load/:id', (req, res) => {
-    const results = [];
-    const id = req.params.id;
-
-    writePool.connect((err, client, done) => {
-        if(err)
-        {
-            done();
-            console.log(err);
-            return res.status(500).json({
-                success : false,
-                data: err
-            })
-        }
-
-        client.query('UPDATE load SET region=($1), errRate=($2), replicationLag=($3) WHERE id=($4);',
-            [req.body.region, req.body.errRate, req.body.replicationLag, id]);
-
-        const query = client.query('SELECT * FROM load ORDER BY id ASC;');
-
-        query.on('row', (row) => {
-            results.push(row);
-        });
-
-        query.on('end', () => {
-            done();
-            return res.status(200).json({
-                success : true,
-                data : results
-            });
-        })
-    })
-});
-
-app.get('/testio', (req, res) => {
-    console.log('req', req.query);
-    io.emit('person added', req.query);
-
-    return res.status(200).json({
-        success : true,
-        data : null
-    });
-});
-
-
 const port = process.env.PORT || 9000;
 http.listen(port, function(){
     console.log('listening on *:' + port);
+
+    //register instance into infrastructure
+    writePool.connect((err, client, done) => {
+        if(err) {
+            done();
+            console.log(err);
+        }
+        client.query(
+            'INSERT INTO infrastructure(id, region, status, latitude, longitude, version, instance_name) values($1, $2, $3, $4, $5, $6, $7) ',
+            [infraId, appRegion, 'Green', infraLat, infraLong, appVersion, instanceName],
+            function(err, result) {
+                console.log("created infra", err, result);
+                done()
+            });
+
+    });
+
+    // heartbeat instance health
+    setInterval(function(){
+        writePool.connect((err, client, done) => {
+            if(err) {
+                done();
+                console.log(err);
+            }
+            client.query(
+                "UPDATE infrastructure SET last_heard_from = NOW(), status = 'Green' WHERE id = $1", [infraId],
+                function(err, result) {
+                    console.log("heartbeat infra", err, result);
+                    done()
+                });
+        });
+    }, 15 * 1000);
+
+
+    // Turn instances red after they go silent
+    setInterval(function(){
+        writePool.connect((err, client, done) => {
+            if(err) {
+                done();
+                console.log(err);
+            }
+            client.query(
+                "UPDATE infrastructure SET status = 'Red' WHERE last_heard_from < NOW() - INTERVAL '2 minutes'", [],
+                function(err, result) {
+                    console.log("Red old infra", err, result);
+                    done()
+                });
+        });
+    }, 30 * 1000);
+
+
+    // Turn instances red after they go silent
+    setInterval(function(){
+        writePool.connect((err, client, done) => {
+            if(err) {
+                done();
+                console.log(err);
+            }
+            client.query(
+                "UPDATE infrastructure SET status = 'Black' WHERE last_heard_from < NOW() - INTERVAL '15 minutes'", [],
+                function(err, result) {
+                    console.log("Red old infra", err, result);
+                    done()
+                });
+        });
+    }, 31 * 1000);
+
 });
-
-
-/*
- app.post('/infrastructure', (req, res) => {
-     const results = [];
-     const location = JSON.parse(req.body.location);
-     console.log(location);
-
-     pg.connect(connectionString, (err, client, done) => {
-         if(err)
-         {
-             done();
-             console.log(err);
-             return res.status(500).json({
-                 success : false,
-                 data: err
-             })
-         }
-
-         client.query('INSERT INTO infrastructure(region, location, status, instanceCount, trafficWeight) values($1, $2, ARRAY[$3, $4], $5, $6)',
-             [req.body.region, parseInt(location[0]), parseInt(location[1]), req.body.status, req.body.instanceCount, req.body.trafficWeight]);
-
-         const query = client.query('SELECT * FROM load ORDER BY id ASC');
-
-         query.on('row', (row) => {
-             results.push(row);
-         });
-*/
