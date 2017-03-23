@@ -16,11 +16,11 @@ const app = express();
 const http              = require('http').Server(app);
 
 const writeConfig = {
-    user: process.env.USER || 'foo',
-    password: process.env.SECRET || 'secret',
+    user: process.env.DB_USER || 'foo',
+    password: process.env.DB_SECRET || 'secret',
     database: process.env.DB_NAME || 'hydra_local',
     host: process.env.DB_WRITE_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
+    port: 5432,
     max: 20,
     idleTimeoutMillis: 60000
 };
@@ -31,7 +31,7 @@ const readConfig = {
     password: process.env.SECRET || 'secret',
     database: process.env.DB_NAME || 'hydra_local',
     host: process.env.DB_READ_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
+    port: 5432,
     max: 20,
     idleTimeoutMillis: 60000
 };
@@ -68,7 +68,6 @@ app.get('/infrastructure', (req, res) => {
     const results = [];
 
     readPool.query("SELECT * FROM infrastructure WHERE status <> 'Black'", [], function(err, data) {
-        done();
 
         const regions = {};
         data.rows.forEach(function(el, ind) {
@@ -187,18 +186,11 @@ http.listen(port, function(){
     console.log('listening on *:' + port);
 
     //register instance into infrastructure
-    writePool.connect((err, client, done) => {
-        if(err) {
-            done();
-            console.log(err);
-        }
-        client.query(
-            'INSERT INTO infrastructure(id, region, status, latitude, longitude, version, instance_name) values($1, $2, $3, $4, $5, $6, $7) ',
-            [infraId, appRegion, 'Green', infraLat, infraLong, appVersion, instanceName],
-            function(err, result) {
-                console.log("created infra", err, result);
-                done()
-            });
+    writePool.query(
+        'INSERT INTO infrastructure(id, region, status, latitude, longitude, version, instance_name) values($1, $2, $3, $4, $5, $6, $7) ',
+        [infraId, appRegion, 'Green', infraLat, infraLong, appVersion, instanceName],
+        function(err, result) {
+            console.log("created infra", err, result);
 
     });
     runTimers();
