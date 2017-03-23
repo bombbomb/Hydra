@@ -21,7 +21,7 @@ const writeConfig = {
     database: process.env.DB_NAME || 'hydra_local',
     host: process.env.DB_WRITE_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
-    max: 10,
+    max: 20,
     idleTimeoutMillis: 60000
 };
 
@@ -32,7 +32,7 @@ const readConfig = {
     database: process.env.DB_NAME || 'hydra_local',
     host: process.env.DB_READ_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
-    max: 10,
+    max: 20,
     idleTimeoutMillis: 60000
 };
 
@@ -113,18 +113,12 @@ app.get('/infrastructure', (req, res) => {
                 let r = regions[i];
 
                 let envs = r.environments;
-
                 r.environments = [];
-
                 for (let e in envs) {
                     r.environments.push(envs[e]);
                 }
-
-
                 result.push(r);
             }
-
-
 
             return res.status(200).json(result);
 
@@ -198,8 +192,11 @@ app.post('/load', (req, res) => {
             })
         }
 
-        client.query('INSERT INTO load(region, errRate, replicationLag) values($1, $2, $3);',
-        [req.body.region, req.body.errRate, req.body.replicationLag]);
+        client.query('INSERT INTO load (region, version, username, ping) values ($1, $2, $3, $4)',
+        [appRegion, appVersion, req.body.name, req.body.lastPing], function(err, data) {
+            done();
+        });
+
 
         return res.status(200).json({
             success : true,
@@ -209,6 +206,57 @@ app.post('/load', (req, res) => {
 });
 
 const port = process.env.PORT || 9000;
+let runTimers = function () {
+// heartbeat instance health
+    setInterval(function () {
+        writePool.connect((err, client, done) => {
+            if (err) {
+                done();
+                console.log(err);
+            }
+            client.query(
+                "UPDATE infrastructure SET last_heard_from = NOW(), status = 'Green' WHERE id = $1", [infraId],
+                function (err, result) {
+                    console.log("heartbeat infra", err, result);
+                    done()
+                });
+        });
+    }, 15 * 1000);
+
+
+    // Turn instances red after they go silent
+    setInterval(function () {
+        writePool.connect((err, client, done) => {
+            if (err) {
+                done();
+                console.log(err);
+            }
+            client.query(
+                "UPDATE infrastructure SET status = 'Red' WHERE last_heard_from < NOW() - INTERVAL '2 minutes'", [],
+                function (err, result) {
+                    console.log("Red old infra", err, result);
+                    done()
+                });
+        });
+    }, 30 * 1000);
+
+
+    // Turn instances red after they go silent
+    setInterval(function () {
+        writePool.connect((err, client, done) => {
+            if (err) {
+                done();
+                console.log(err);
+            }
+            client.query(
+                "UPDATE infrastructure SET status = 'Black' WHERE last_heard_from < NOW() - INTERVAL '15 minutes'", [],
+                function (err, result) {
+                    console.log("Red old infra", err, result);
+                    done()
+                });
+        });
+    }, 31 * 1000);
+};
 http.listen(port, function(){
     console.log('listening on *:' + port);
 
@@ -227,55 +275,6 @@ http.listen(port, function(){
             });
 
     });
-
-    // heartbeat instance health
-    setInterval(function(){
-        writePool.connect((err, client, done) => {
-            if(err) {
-                done();
-                console.log(err);
-            }
-            client.query(
-                "UPDATE infrastructure SET last_heard_from = NOW(), status = 'Green' WHERE id = $1", [infraId],
-                function(err, result) {
-                    console.log("heartbeat infra", err, result);
-                    done()
-                });
-        });
-    }, 15 * 1000);
-
-
-    // Turn instances red after they go silent
-    setInterval(function(){
-        writePool.connect((err, client, done) => {
-            if(err) {
-                done();
-                console.log(err);
-            }
-            client.query(
-                "UPDATE infrastructure SET status = 'Red' WHERE last_heard_from < NOW() - INTERVAL '2 minutes'", [],
-                function(err, result) {
-                    console.log("Red old infra", err, result);
-                    done()
-                });
-        });
-    }, 30 * 1000);
-
-
-    // Turn instances red after they go silent
-    setInterval(function(){
-        writePool.connect((err, client, done) => {
-            if(err) {
-                done();
-                console.log(err);
-            }
-            client.query(
-                "UPDATE infrastructure SET status = 'Black' WHERE last_heard_from < NOW() - INTERVAL '15 minutes'", [],
-                function(err, result) {
-                    console.log("Red old infra", err, result);
-                    done()
-                });
-        });
-    }, 31 * 1000);
+    runTimers();
 
 });
