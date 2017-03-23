@@ -16,11 +16,16 @@ export class Region
             iconColor: 'white'
         });
 
-        this.marker = L.marker(region.location, {icon: serverIcon});
+        this.marker = L.marker(this.getLatLng(), {icon: serverIcon});
 
         this.marker.on('click', () => {
             clickCallback(this);
         });
+    }
+
+    getLatLng()
+    {
+        return [this.lat, this.long];
     }
 
     update(regionStats)

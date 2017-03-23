@@ -1,4 +1,5 @@
 import L from 'leaflet';
+import Region from './Region.js';
 
 export class User
 {
@@ -6,13 +7,12 @@ export class User
     {
         this.update(user);
 
-        let userIcon = L.AwesomeMarkers.icon({
-            icon: 'user',
-            markerColor: 'blue',
-            iconColor: 'white'
+        this.marker = L.circle(this.getLatLng(), {
+            color: '#38A9DB',
+            fillColor: 'white',
+            fillOpacity: 1,
+            radius: 2000
         });
-
-        this.marker = L.marker(this.getLatLng(), {icon: userIcon});
 
         this.marker.on('click', () => {
             clickCallback(this);
@@ -33,11 +33,16 @@ export class User
         return [this.lat, this.long];
     }
 
+    isConnectedToRegion()
+    {
+        return this.connectedRegion instanceof Region;
+    }
+
     connectToRegion(region)
     {
         this.connectedRegion = region;
         this.connectedPolyLine = L.polyline(
-            [this.getLatLng(), region.location],
+            [this.getLatLng(), region.getLatLng()],
             {
                 color: '#38A9DB',
                 weight: 2,

@@ -10,6 +10,13 @@ class UserPanel extends Component {
                 <div>
                     <h2>{details.name}</h2>
                 </div>
+
+                <div>
+                    <div>Last Ping: {details.lastPing}</div>
+                    <div>Lag: {details.personalLag}</div>
+                    <div>Click Delay: {details.clickDelay}</div>
+                    <div>Connected to Region: {details.region}</div>
+                </div>
             </div>
         );
     }

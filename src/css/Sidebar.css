@@ -17,9 +17,14 @@
     border-left: grey 1px solid;
 }
 
-.environment-block
+.environment-block, .instance-block
 {
     padding-top: 20px;
+}
+
+.instance-header
+{
+    color: dodgerblue;
 }
 
 .environment-revision

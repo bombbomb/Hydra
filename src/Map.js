@@ -53,26 +53,46 @@ class Map extends Component {
             const { users, regions, map } = this.state;
 
             let user = users[userMsg.name];
+            let region = regions[userMsg.region];
             if (user === undefined)
             {
                 user = new User(userMsg, this.props.changePanel);
                 user.marker.addTo(map);
-                user.connectToRegion(regions[userMsg.region]).addTo(map);
             }
             else
             {
-                if (user.getConnectedToRegion().name != userMsg.region)
-                {
+                if (user.isConnectedToRegion() && user.getConnectedToRegion().name != userMsg.region) {
                     user.getConnectedLine().removeFrom(map);
-                    user.connectToRegion(regions[userMsg.region]).addTo(map);
                 }
 
                 user.update(userMsg);
             }
 
+            if (region !== undefined)
+            {
+                user.connectToRegion(region).addTo(map);
+
+                setTimeout(() => this.fadeAway(user), 500);
+            }
+
             users[userMsg.name] = user;
             this.setState({ users: users });
         });
+    }
+
+    fadeAway(user)
+    {
+        let opacity = user.getConnectedLine().options.opacity;
+
+        opacity = opacity - 0.05;
+
+        if (opacity < 0) opacity = 0;
+
+        user.getConnectedLine().setStyle({ opacity: opacity });
+
+        opacity > 0 ?
+            setTimeout(() => this.fadeAway(user), 200)
+            : user.getConnectedLine().removeFrom(this.state.map);
     }
 
     updateRegions(callback)
@@ -88,15 +108,24 @@ class Map extends Component {
                         return;
                     }
 
+                    let regionsResponse = response.body;
+
+                    if (!(regionsResponse instanceof Array))
+                    {
+                        console.log('Bad infrastructure response', regionsResponse);
+                        return;
+                    }
+
                     let regions = {};
-                    response.body.regions.forEach((regionRaw) => {
+                    regionsResponse.forEach((regionRaw) => {
                         let region = new Region(regionRaw, this.props.changePanel);
                         regions[region.name] = region;
 
                         region.marker.addTo(this.state.map);
                     });
 
-                    this.setState({ regions: regions }, callback);
+                    this.setState({ regions: regions });
+                    //this.setState({ regions: regions }, callback);
                 }
             );
     }
@@ -114,8 +143,16 @@ class Map extends Component {
                         return;
                     }
 
+                    let regionsResponse = response.body;
+
+                    if (!(regionsResponse instanceof Array))
+                    {
+                        console.log('Bad load response', regionsResponse);
+                        return;
+                    }
+
                     let regions = this.state.regions;
-                    response.body.regions.forEach((region) => {
+                    regionsResponse.forEach((region) => {
                         regions[region.name].update(region);
                     });
 

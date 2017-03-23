@@ -9,12 +9,20 @@ class RegionPanel extends Component {
         let environments = [];
         details.environments.forEach(function(environment) {
             environments.push((
-                <div className="environment-block" key={details.name + environment.revision}>
-                    <div className="environment-revision">Revision {environment.revision}</div>
-                    <div>Status: {environment.status}</div>
-                    <div>Instances: {environment.instanceCount}</div>
-                    <div>Traffic Weight: {environment.trafficWeight}</div>
-                    <div>Error Rate: {environment.errRate}</div>
+                <div className="environment-block" key={details.name + environment.name}>
+                    <div className="environment-revision">{environment.name} environment</div>
+                    <div>Instances ({environment.instances.length})</div>
+                    {
+                        environment.instances.map(function(instance) {
+                            return (
+                                <div className="instance-block">
+                                    <div className="instance-header">{instance.name} instance</div>
+                                    <div>Status: {instance.status}</div>
+                                    <div>Created: {instance.created}</div>
+                                </div>
+                            );
+                        })
+                    }
                 </div>
             ));
         });
