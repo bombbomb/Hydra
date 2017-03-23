@@ -27,8 +27,8 @@ const writeConfig = {
 
 
 const readConfig = {
-    user: process.env.USER || 'foo',
-    password: process.env.SECRET || 'secret',
+    user: process.env.DB_USER || 'foo',
+    password: process.env.DB_SECRET || 'secret',
     database: process.env.DB_NAME || 'hydra_local',
     host: process.env.DB_READ_HOST || 'localhost',
     port: 5432,
