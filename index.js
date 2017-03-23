@@ -211,7 +211,7 @@ function pingIris(type, body) {
             json: true,
             body: {
                 'type': type,
-                'body': body
+                'data': body
             }
         }
         , function (error, response, body) {
