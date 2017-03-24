@@ -20,7 +20,8 @@ class Map extends Component {
         this.state = {
             regions: {},
             users: {},
-            map: null
+            map: null,
+            client: null
         }
     }
 
@@ -31,7 +32,7 @@ class Map extends Component {
 
         L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/light-v9/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYm9tYmJvbWIiLCJhIjoiY2owZ3dram8yMDJ2cTMycDU3M3JuOW5vZSJ9._eHrHFHdFpyrX4eJ82Whgg', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-            maxZoom: 6
+            maxZoom: 10
         }).addTo(map);
 
         this.setState({map: map}, () => {
@@ -87,7 +88,21 @@ class Map extends Component {
     updateInfrastructures(infraMsg)
     {
         this.clearRegions();
-        this.updateRegions(infraMsg);
+        this.updateRegions(infraMsg, () => {
+            const { client, regions, map } = this.state;
+
+            if (client == null) return;
+
+            if (client.isConnectedToRegion()) client.getConnectedLine().removeFrom(map);
+
+            let region = regions[client.region];
+            if (region !== undefined)
+            {
+                client.connectToRegion(region).addTo(map);
+            }
+
+            this.setState({ client: client });
+        });
     }
 
     fadeAway(user)
@@ -103,6 +118,58 @@ class Map extends Component {
         opacity > 0 ?
             setTimeout(() => this.fadeAway(user), 200)
             : user.getConnectedLine().removeFrom(this.state.map);
+    }
+
+    getClientsLocation()
+    {
+        let mapComponent = this;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => this.addClientToMap(position, mapComponent));
+        } else {
+            console.log("Geolocation is not supported by this browser.");
+        }
+    }
+
+    addClientToMap(position, mapComponent)
+    {
+        const {regions, map} = mapComponent.state;
+
+        let startTime = new Date().getTime();
+        request
+            .get('/which')
+            .end(
+                (error, response) =>
+                {
+                    if (error)
+                    {
+                        console.log('Error', error);
+                        return;
+                    }
+
+                    let serverDetails = response.body;
+
+                    let user = new User({
+                        name: 'You',
+                        lat: position.coords.latitude,
+                        long: position.coords.longitude,
+                        region: serverDetails.region,
+                        lastPing: new Date().getTime() - startTime
+                    }, this.props.changePanel);
+
+                    console.log('client', user);
+
+                    user.marker.addTo(map);
+
+                    let region = regions[user.region];
+                    console.log('region', region);
+                    if (region !== undefined)
+                    {
+                        user.connectToRegion(region).addTo(map);
+                    }
+
+                    this.setState({ client: user });
+                }
+            );
     }
 
     initializeRegions()
@@ -126,7 +193,7 @@ class Map extends Component {
                         return;
                     }
 
-                    this.updateRegions(regionsResponse);
+                    this.updateRegions(regionsResponse, () => this.getClientsLocation());
                 }
             );
     }
@@ -142,7 +209,7 @@ class Map extends Component {
         }
     }
 
-    updateRegions(rawRegions)
+    updateRegions(rawRegions, callback)
     {
         let regions = {};
 
@@ -153,7 +220,7 @@ class Map extends Component {
             region.marker.addTo(this.state.map);
         });
 
-        this.setState({ regions: regions });
+        this.setState({ regions: regions }, () => { if (callback !== undefined) callback() });
     }
 
     render() {

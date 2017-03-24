@@ -7,13 +7,20 @@ export class User
     {
         this.update(user);
 
-        this.marker = L.circle(this.getLatLng(), {
-            color: this.getColor(),
-            fillColor: 'white',
-            fillOpacity: 0.7,
-            opacity: 0.7,
-            radius: 2000
-        });
+        this.marker =
+            this.isClient() ?
+                L.marker(this.getLatLng(), {icon: L.AwesomeMarkers.icon({
+                    icon: 'user-circle-o',
+                    markerColor: 'purple',
+                    iconColor: 'white'
+                })})
+                : L.circle(this.getLatLng(), {
+                    color: this.getColor(),
+                    fillColor: 'white',
+                    fillOpacity: 0.7,
+                    opacity: 0.7,
+                    radius: 2000
+                });
 
         this.marker.on('click', () => {
             clickCallback(this);
@@ -29,9 +36,15 @@ export class User
         }
     }
 
+    isClient()
+    {
+        return this.name == 'You'
+    }
+
     getColor()
     {
         let color = 'green';
+
         if (this.lastPing > 200) color = 'red';
         else if (this.lastPing > 100) color = 'orange';
 
@@ -57,7 +70,7 @@ export class User
             {
                 color: this.getColor(),
                 weight: 2,
-                opacity: 0.3
+                opacity: this.isClient() ? 0.7 : 0.3
             }
         );
 

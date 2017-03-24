@@ -42,7 +42,7 @@ const readPool = new pg.Pool(readConfig);
 const appRegion = process.env.GAIA_REGION || 'local';
 const appVersion = process.env.GAIA_VERSION || 'hot';
 
-const infraLat = process.env.LAT || '38.8';
+const infraLat = process.env.LAT || '50';
 const infraLong = process.env.LONG || '-104.7';
 
 const instanceName = Moniker.choose();
@@ -61,6 +61,14 @@ app.get('/', function (req, res) {
 
 app.get('/health-check', function(req, res) {
     res.status(200).send('Hydra lives.');
+});
+
+app.get('/which', function(req, res) {
+    res.status(200).send({
+        region: appRegion,
+        version: appVersion,
+        instance: instanceName
+    });
 });
 
 
