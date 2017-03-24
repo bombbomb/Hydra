@@ -144,6 +144,40 @@ app.post('/load', (req, res) => {
     return res.status(200).json(user);
 });
 
+app.post('/user', (req, res) => {
+
+    let user = req.body;
+
+    user.region = appRegion;
+    user.appVersion = appVersion;
+
+    pingIris("User", user);
+
+    let qry = 'INSERT INTO bombuser (name, lat, long) ' +
+        'VALUES ($1, $2, $3) ' +
+        'ON CONFLICT (name) DO UPDATE ' +
+        'SET lat = $2, long = $3, updated = NOW()';
+    writePool.query(qry, [user.name, user.lat, user.long], function(err, data) {
+        if (err)
+            console.log("POST USER err", err);
+
+        return res.status(200).json(user);
+    });
+
+});
+
+app.get('/users', (req, res) => {
+
+    let qry = "SELECT * FROM bombuser WHERE updated > (NOW() - INTERVAL '15 minutes')";
+    readPool.query(qry, [], function(err, data) {
+        if (err)
+            console.log("POST USER err", err);
+
+        return res.status(200).json(data.rows);
+    });
+
+});
+
 const port = process.env.PORT || 9000;
 let runTimers = function () {
 // heartbeat instance health
